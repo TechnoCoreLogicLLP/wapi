@@ -722,3 +722,153 @@ func (cm *CatalogManager) UpdateProductImages(catalogId, retailerId, imageURL st
 	}
 	return cm.UpsertProductItem(catalogId, fields)
 }
+
+// CreateCatalog creates a new product catalog for the business account.
+// vertical: "commerce" or "ecommerce" (default: "commerce")
+// Returns the created catalog with ID and name.
+func (cm *CatalogManager) CreateCatalog(name string, vertical string) (*Catalog, error) {
+	if vertical == "" {
+		vertical = "commerce"
+	}
+	
+	apiPath := fmt.Sprintf("%s/owned_product_catalogs", cm.businessAccountId)
+	apiRequest := cm.requester.NewApiRequest(apiPath, http.MethodPost)
+	
+	body := map[string]interface{}{
+		"name":     name,
+		"vertical": vertical,
+	}
+	
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal catalog body: %w", err)
+	}
+	
+	apiRequest.SetBody(string(payload))
+	response, err := apiRequest.Execute()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Meta returns {"id": "catalog_id"}
+	var apiResp struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal([]byte(response), &apiResp); err != nil {
+		return nil, fmt.Errorf("failed to parse catalog creation response: %w", err)
+	}
+	
+	if apiResp.ID == "" {
+		return nil, fmt.Errorf("catalog created but no ID returned from Meta API")
+	}
+	
+	// Return catalog with ID and name
+	return &Catalog{
+		Id:       apiResp.ID,
+		Name:     name,
+		Vertical: vertical,
+	}, nil
+}
+
+// GetCatalog retrieves a catalog by ID with optional fields.
+// fields: comma-separated list of fields to retrieve (e.g., "id,name,product_count,vertical")
+func (cm *CatalogManager) GetCatalog(catalogId string, fields string) (*Catalog, error) {
+	apiPath := catalogId
+	if fields != "" {
+		apiPath = fmt.Sprintf("%s?fields=%s", catalogId, fields)
+	}
+	
+	apiRequest := cm.requester.NewApiRequest(apiPath, http.MethodGet)
+	response, err := apiRequest.Execute()
+	if err != nil {
+		return nil, err
+	}
+	
+	var catalog Catalog
+	if err := json.Unmarshal([]byte(response), &catalog); err != nil {
+		return nil, fmt.Errorf("failed to parse catalog response: %w", err)
+	}
+	
+	return &catalog, nil
+}
+
+// ListOwnedCatalogs retrieves all catalogs owned by the business account.
+// Returns a simplified list of catalogs with basic information.
+func (cm *CatalogManager) ListOwnedCatalogs() ([]Catalog, error) {
+	apiPath := fmt.Sprintf("%s/owned_product_catalogs?fields=id,name,product_count,vertical", cm.businessAccountId)
+	apiRequest := cm.requester.NewApiRequest(apiPath, http.MethodGet)
+	
+	response, err := apiRequest.Execute()
+	if err != nil {
+		return nil, err
+	}
+	
+	var result struct {
+		Data []Catalog `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(response), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse catalogs response: %w", err)
+	}
+	
+	return result.Data, nil
+}
+
+// UpdateCatalog updates a catalog's name.
+func (cm *CatalogManager) UpdateCatalog(catalogId string, name string) (*Catalog, error) {
+	apiPath := catalogId
+	apiRequest := cm.requester.NewApiRequest(apiPath, http.MethodPost)
+	
+	body := map[string]interface{}{
+		"name": name,
+	}
+	
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal catalog update body: %w", err)
+	}
+	
+	apiRequest.SetBody(string(payload))
+	response, err := apiRequest.Execute()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Meta returns {"success": true}
+	var apiResp struct {
+		Success bool `json:"success"`
+	}
+	if err := json.Unmarshal([]byte(response), &apiResp); err != nil {
+		return nil, fmt.Errorf("failed to parse catalog update response: %w", err)
+	}
+	
+	if !apiResp.Success {
+		return nil, fmt.Errorf("catalog update failed")
+	}
+	
+	// Return updated catalog
+	return cm.GetCatalog(catalogId, "id,name,product_count,vertical")
+}
+
+// DeleteCatalog deletes a catalog by ID.
+func (cm *CatalogManager) DeleteCatalog(catalogId string) error {
+	apiPath := catalogId
+	apiRequest := cm.requester.NewApiRequest(apiPath, http.MethodDelete)
+	
+	response, err := apiRequest.Execute()
+	if err != nil {
+		return err
+	}
+	
+	var apiResp struct {
+		Success bool `json:"success"`
+	}
+	if err := json.Unmarshal([]byte(response), &apiResp); err != nil {
+		return fmt.Errorf("failed to parse catalog deletion response: %w", err)
+	}
+	
+	if !apiResp.Success {
+		return fmt.Errorf("catalog deletion failed")
+	}
+	
+	return nil
+}
