@@ -389,8 +389,8 @@ type WhatsappBusinessAccount struct {
 ```go
 type WhatsappBusinessAccountAnalyticsResponse struct {
     PhoneNumbers []string             `json:"phone_numbers,omitempty"`
+    CountryCodes []string             `json:"country_codes,omitempty"`
     Granularity  string               `json:"granularity,omitempty"`
     DataPoints   []AnalyticsDataPoint `json:"data_points,omitempty"`
 }
 ```
-

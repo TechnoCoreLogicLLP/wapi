@@ -135,6 +135,7 @@ type AnalyticsDataPoint struct {
 
 type WhatsappBusinessAccountAnalyticsResponse struct {
 	PhoneNumbers []string             `json:"phone_numbers,omitempty"`
+	CountryCodes []string             `json:"country_codes,omitempty"`
 	Granularity  string               `json:"granularity,omitempty"`
 	DataPoints   []AnalyticsDataPoint `json:"data_points,omitempty"`
 }
@@ -178,9 +179,13 @@ func (client *BusinessClient) FetchAnalytics(options AccountAnalyticsOptions) (W
 		// return wapi.go custom error here
 		fmt.Println("Error while fetching business account", err)
 	}
-	var responseToReturn WhatsappBusinessAccountAnalyticsResponse
-	json.Unmarshal([]byte(response), &responseToReturn)
-	return responseToReturn, nil
+	var responseWrapper struct {
+		Analytics WhatsappBusinessAccountAnalyticsResponse `json:"analytics"`
+	}
+	if err := json.Unmarshal([]byte(response), &responseWrapper); err != nil {
+		return WhatsappBusinessAccountAnalyticsResponse{}, err
+	}
+	return responseWrapper.Analytics, nil
 }
 
 type ConversationCategoryType string
