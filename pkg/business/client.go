@@ -180,6 +180,7 @@ func (client *BusinessClient) FetchAnalytics(options AccountAnalyticsOptions) (W
 		fmt.Println("Error while fetching business account", err)
 		return WhatsappBusinessAccountAnalyticsResponse{}, err
 	}
+	fmt.Printf("DEBUG: FetchAnalytics Raw Response: %s\n", response)
 	var responseWrapper struct {
 		Analytics WhatsappBusinessAccountAnalyticsResponse `json:"analytics"`
 	}
@@ -352,6 +353,7 @@ func (client *BusinessClient) ConversationAnalytics(options ConversationAnalytic
 		fmt.Println("Error while fetching business account", err)
 		return nil, err
 	}
+	fmt.Printf("DEBUG: ConversationAnalytics Raw Response: %s\n", response)
 	var responseToReturn WhatsAppConversationAnalyticsResponse
 	if err := json.Unmarshal([]byte(response), &responseToReturn); err != nil {
 		return nil, err
