@@ -100,7 +100,7 @@ func (requestClientInstance *RequestClient) request(params RequestCloudApiParams
 func (client *RequestClient) NewApiRequest(path, method string) *ApiRequest {
 	return &ApiRequest{
 		Path:        path,
-		Fields:      []ApiRequestQueryParamField{},
+		Fields:      []*ApiRequestQueryParamField{}, // Changed to slice of pointers
 		Requester:   client,
 		Method:      method,
 		QueryParams: map[string]string{},
@@ -120,7 +120,7 @@ type ApiRequest struct {
 	Path        string
 	Method      string
 	Body        string
-	Fields      []ApiRequestQueryParamField
+	Fields      []*ApiRequestQueryParamField // Changed to slice of pointers
 	QueryParams map[string]string
 	Requester   *RequestClient
 }
@@ -130,8 +130,11 @@ func (request *ApiRequest) AddField(field ApiRequestQueryParamField) *ApiRequest
 	// * note that if there need to be multiple fields in a single request then the list of fields should be command separated
 	// * for example: fields=field1,field2,field3
 	// * also note that if there filters in a field then they should be called like a function in the param string, for ex: fields=field1.filter1(value1).filter2(value2),field2.filter1(value1)
-	request.Fields = append(request.Fields, field)
-	return &field
+
+	// Store pointer to the field so subsequent modifications (AddFilter) affect the stored field
+	ptr := &field
+	request.Fields = append(request.Fields, ptr)
+	return ptr
 }
 
 // AddQueryParam adds a query parameter to the request.
