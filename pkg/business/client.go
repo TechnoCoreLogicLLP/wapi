@@ -385,3 +385,112 @@ const (
 	BusinessRoleMessaging            BusinessRole = "MESSAGING"
 	BusinessRoleManageBusinessPhones BusinessRole = "MANAGE_BUSINESS_PHONES"
 )
+
+type TemplateAnalyticsGranularityType string
+
+const (
+	TemplateAnalyticsGranularityTypeDaily TemplateAnalyticsGranularityType = "DAILY"
+)
+
+type TemplateAnalyticsMetricType string
+
+const (
+	TemplateAnalyticsMetricTypeCost      TemplateAnalyticsMetricType = "COST"
+	TemplateAnalyticsMetricTypeClicked   TemplateAnalyticsMetricType = "CLICKED"
+	TemplateAnalyticsMetricTypeDelivered TemplateAnalyticsMetricType = "DELIVERED"
+	TemplateAnalyticsMetricTypeRead      TemplateAnalyticsMetricType = "READ"
+	TemplateAnalyticsMetricTypeSent      TemplateAnalyticsMetricType = "SENT"
+)
+
+type TemplateAnalyticsOptions struct {
+	Start       time.Time                        `json:"start" validate:"required"`
+	End         time.Time                        `json:"end" validate:"required"`
+	Granularity TemplateAnalyticsGranularityType `json:"granularity" validate:"required"`
+	TemplateIds []string                         `json:"template_ids" validate:"required"`
+	MetricTypes []TemplateAnalyticsMetricType    `json:"metric_types,omitempty"`
+}
+
+type TemplateAnalyticsCost struct {
+	Type  string  `json:"type"`
+	Value float64 `json:"value"`
+}
+
+type TemplateAnalyticsClick struct {
+	Type          string `json:"type"`
+	ButtonContent string `json:"button_content"`
+	Count         int    `json:"count"`
+}
+
+type TemplateAnalyticsDataPoint struct {
+	TemplateId string                   `json:"template_id"`
+	Start      int                      `json:"start"`
+	End        int                      `json:"end"`
+	Sent       int                      `json:"sent"`
+	Delivered  int                      `json:"delivered"`
+	Read       int                      `json:"read"`
+	Clicked    []TemplateAnalyticsClick `json:"clicked,omitempty"`
+	Cost       []TemplateAnalyticsCost  `json:"cost,omitempty"`
+}
+
+type TemplateAnalyticsData struct {
+	Granularity string                       `json:"granularity"`
+	ProductType string                       `json:"product_type"`
+	DataPoints  []TemplateAnalyticsDataPoint `json:"data_points"`
+}
+
+type TemplateAnalyticsResponse struct {
+	Data   []TemplateAnalyticsData `json:"data"`
+	Paging struct {
+		Cursors struct {
+			Before string `json:"before"`
+			After  string `json:"after"`
+		} `json:"cursors"`
+	} `json:"paging"`
+}
+
+// TemplateAnalytics fetches the template analytics for the business account.
+func (client *BusinessClient) TemplateAnalytics(options TemplateAnalyticsOptions) (*TemplateAnalyticsResponse, error) {
+	apiRequest := client.requester.NewApiRequest(client.BusinessAccountId, http.MethodGet)
+	analyticsField := apiRequest.AddField(request_client.ApiRequestQueryParamField{
+		Name:    "template_analytics",
+		Filters: map[string]string{},
+	})
+
+	// Format dates as YYYY-MM-DD if using WABA timezone (not supported here yet, defaulting to unix timestamp logic as per doc if not using waba timezone, but doc says "As template analytics are being provided with a daily granularity in the UTC timezone, a start unix timestamp...". Let's use unix timestamp for now as per other methods)
+	analyticsField.AddFilter("start", fmt.Sprint(options.Start.Unix()))
+	analyticsField.AddFilter("end", fmt.Sprint(options.End.Unix()))
+	analyticsField.AddFilter("granularity", string(options.Granularity))
+
+	if len(options.TemplateIds) > 0 {
+		if b, err := json.Marshal(options.TemplateIds); err == nil {
+			analyticsField.AddFilter("template_ids", string(b))
+		} else {
+			analyticsField.AddFilter("template_ids", "[]")
+		}
+	} else {
+		return nil, fmt.Errorf("template_ids are required")
+	}
+
+	if len(options.MetricTypes) > 0 {
+		metricStrings := make([]string, len(options.MetricTypes))
+		for i, metric := range options.MetricTypes {
+			metricStrings[i] = string(metric)
+		}
+		if b, err := json.Marshal(metricStrings); err == nil {
+			analyticsField.AddFilter("metric_types", string(b))
+		}
+	}
+
+	response, err := apiRequest.Execute()
+	if err != nil {
+		fmt.Println("Error while fetching template analytics", err)
+		return nil, err
+	}
+
+	var responseToReturn TemplateAnalyticsResponse
+	if err := json.Unmarshal([]byte(response), &responseToReturn); err != nil {
+		return nil, err
+	}
+
+	return &responseToReturn, nil
+}
