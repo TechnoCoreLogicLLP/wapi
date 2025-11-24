@@ -227,8 +227,8 @@ type ConversationAnalyticsGranularityType string
 
 const (
 	ConversationAnalyticsGranularityTypeHalfHour ConversationAnalyticsGranularityType = "HALF_HOUR"
-	ConversationAnalyticsGranularityTypeDay      ConversationAnalyticsGranularityType = "DAILY"
-	ConversationAnalyticsGranularityTypeMonth    ConversationAnalyticsGranularityType = "MONTHLY"
+	ConversationAnalyticsGranularityTypeDay      ConversationAnalyticsGranularityType = "DAY"
+	ConversationAnalyticsGranularityTypeMonth    ConversationAnalyticsGranularityType = "MONTH"
 )
 
 type ConversationAnalyticsOptions struct {
@@ -256,15 +256,23 @@ type WhatsAppConversationAnalyticsNode struct {
 	Cost                  float64 `json:"cost,omitempty"`
 }
 
+type WhatsAppConversationAnalyticsDimension struct {
+	Name   string   `json:"name,omitempty"`
+	Values []string `json:"values,omitempty"`
+}
+
 type WhatsAppConversationAnalyticsEdge struct {
-	Data []struct {
-		DataPoints []WhatsAppConversationAnalyticsNode `json:"data_points,omitempty"`
-	} `json:"data,omitempty"`
+	DataPoints []WhatsAppConversationAnalyticsNode      `json:"data_points,omitempty"`
+	Dimensions []WhatsAppConversationAnalyticsDimension `json:"dimensions,omitempty"`
+}
+
+type WhatsAppConversationAnalyticsPayload struct {
+	Data   []WhatsAppConversationAnalyticsEdge        `json:"data,omitempty"`
 	Paging internal.WhatsAppBusinessApiPaginationMeta `json:"paging,omitempty"`
 }
 
 type WhatsAppConversationAnalyticsResponse struct {
-	ConversationAnalytics []WhatsAppConversationAnalyticsEdge `json:"conversation_analytics" validate:"required"`
+	ConversationAnalytics WhatsAppConversationAnalyticsPayload `json:"conversation_analytics" validate:"required"`
 }
 
 // ConversationAnalytics fetches the conversation analytics for the business account.
