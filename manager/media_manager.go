@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gTahidi/wapi.go/internal/request_client"
@@ -132,4 +133,121 @@ func (mm *MediaManager) UploadMedia(phoneNumberId string, file io.Reader, filena
 	}
 
 	return result.ID, nil
+}
+
+// ResumableUploadSession represents the response from creating an upload session
+type ResumableUploadSession struct {
+	ID string `json:"id"` // The upload session ID (h:xxx format)
+}
+
+// ResumableUploadResult represents the response from completing an upload
+type ResumableUploadResult struct {
+	Handle string `json:"h"` // The media handle to use in templates (4::xxx format)
+}
+
+// CreateResumableUploadSession creates a new resumable upload session for template media.
+// This is used to upload media files that will be used in message template headers.
+// appID is your Meta App ID, fileLength is the size in bytes, fileType is the MIME type (e.g., "image/png").
+// Returns the upload session ID.
+func (mm *MediaManager) CreateResumableUploadSession(appID string, fileLength int64, fileType string) (string, error) {
+	// POST to /{app-id}/uploads with file_length, file_type, file_name
+	path := fmt.Sprintf("%s/uploads", appID)
+
+	body := map[string]interface{}{
+		"file_length": fileLength,
+		"file_type":   fileType,
+	}
+	bodyJSON, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	apiRequest := mm.requester.NewApiRequest(path, http.MethodPost)
+	apiRequest.SetBody(string(bodyJSON))
+
+	rawResponse, err := apiRequest.Execute()
+	if err != nil {
+		return "", fmt.Errorf("failed to create upload session: %w", err)
+	}
+
+	var result ResumableUploadSession
+	if err := json.Unmarshal([]byte(rawResponse), &result); err != nil {
+		return "", fmt.Errorf("failed to parse upload session response: %w", err)
+	}
+
+	if result.ID == "" {
+		return "", fmt.Errorf("no upload session ID in response: %s", rawResponse)
+	}
+
+	return result.ID, nil
+}
+
+// UploadResumableMedia uploads file data to an existing upload session.
+// sessionID is the upload session ID from CreateResumableUploadSession.
+// fileData is the raw file bytes, fileOffset is the starting byte offset (usually 0).
+// Returns the media handle to use in template header_handle.
+func (mm *MediaManager) UploadResumableMedia(sessionID string, fileData []byte, fileOffset int64) (string, error) {
+	// POST to /{upload-session-id} with file data in body
+	// Headers: Authorization, file_offset
+
+	requestPath := fmt.Sprintf("%s://%s/%s/%s",
+		request_client.REQUEST_PROTOCOL,
+		request_client.BASE_URL,
+		request_client.API_VERSION,
+		sessionID,
+	)
+
+	httpRequest, err := http.NewRequest(http.MethodPost, requestPath, bytes.NewReader(fileData))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpRequest.Header.Set("Authorization", fmt.Sprintf("OAuth %s", mm.requester.ApiAccessToken()))
+	httpRequest.Header.Set("file_offset", strconv.FormatInt(fileOffset, 10))
+
+	httpClient := &http.Client{}
+	response, err := httpClient.Do(httpRequest)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute upload request: %w", err)
+	}
+	defer response.Body.Close()
+
+	respBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return "", fmt.Errorf("upload failed with status %d: %s", response.StatusCode, string(respBody))
+	}
+
+	var result ResumableUploadResult
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return "", fmt.Errorf("failed to parse upload response: %w", err)
+	}
+
+	if result.Handle == "" {
+		return "", fmt.Errorf("no media handle in response: %s", string(respBody))
+	}
+
+	return result.Handle, nil
+}
+
+// UploadMediaForTemplate uploads a file and returns a handle suitable for use in template header_handle.
+// This is a convenience method that combines CreateResumableUploadSession and UploadResumableMedia.
+// appID is your Meta App ID, fileData is the raw file bytes, fileType is the MIME type.
+func (mm *MediaManager) UploadMediaForTemplate(appID string, fileData []byte, fileType string) (string, error) {
+	// Step 1: Create upload session
+	sessionID, err := mm.CreateResumableUploadSession(appID, int64(len(fileData)), fileType)
+	if err != nil {
+		return "", fmt.Errorf("failed to create upload session: %w", err)
+	}
+
+	// Step 2: Upload the file data
+	handle, err := mm.UploadResumableMedia(sessionID, fileData, 0)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload media: %w", err)
+	}
+
+	return handle, nil
 }

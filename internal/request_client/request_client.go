@@ -35,6 +35,10 @@ func (client *RequestClient) ApiVersion() string {
 	return client.apiVersion
 }
 
+func (client *RequestClient) ApiAccessToken() string {
+	return client.apiAccessToken
+}
+
 // NewRequestClient creates a new instance of RequestClient.
 func NewRequestClient(apiAccessToken string) *RequestClient {
 	return &RequestClient{
