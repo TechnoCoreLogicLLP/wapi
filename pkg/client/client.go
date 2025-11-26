@@ -1,12 +1,12 @@
 package wapi
 
 import (
-	"github.com/labstack/echo/v4"
 	"github.com/gTahidi/wapi.go/internal/request_client"
 	"github.com/gTahidi/wapi.go/manager"
 	"github.com/gTahidi/wapi.go/pkg/business"
 	"github.com/gTahidi/wapi.go/pkg/events"
 	"github.com/gTahidi/wapi.go/pkg/messaging"
+	"github.com/labstack/echo/v4"
 )
 
 type ClientConfig struct {
@@ -86,4 +86,10 @@ func (client *Client) On(eventType events.EventType, handler func(events.BaseEve
 func (client *Client) Initiate() bool {
 	client.webhook.ListenToEvents()
 	return true
+}
+
+// GetMediaManager returns a MediaManager for uploading media (e.g., for template headers).
+// This is useful when you need to upload media without a specific phone number context.
+func (client *Client) GetMediaManager() *manager.MediaManager {
+	return manager.NewMediaManager(*client.requester)
 }
