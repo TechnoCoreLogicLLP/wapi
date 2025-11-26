@@ -1,13 +1,13 @@
 package manager
 
 import (
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "strings"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
 
-    "github.com/gTahidi/wapi.go/internal"
-    "github.com/gTahidi/wapi.go/internal/request_client"
+	"github.com/gTahidi/wapi.go/internal"
+	"github.com/gTahidi/wapi.go/internal/request_client"
 )
 
 // MessageTemplateStatus represents the status of a WhatsApp Business message template.
@@ -109,7 +109,8 @@ type NamedParamExample struct {
 
 // TemplateMessageComponentExample represents an example object for a template component.
 type TemplateMessageComponentExample struct {
-	HeaderHandle          *[]string            `json:"header_handle,omitempty"`            // for media headers (IMAGE, VIDEO, DOCUMENT)
+	HeaderHandle          *[]string            `json:"header_handle,omitempty"`            // for media headers using Meta upload handle
+	HeaderUrl             *[]string            `json:"header_url,omitempty"`               // for media headers using external URL (IMAGE, VIDEO, DOCUMENT)
 	HeaderTextNamedParams *[]NamedParamExample `json:"header_text_named_params,omitempty"` // for named header params
 	HeaderText            *[]string            `json:"header_text,omitempty"`              // for text headers (positional examples)
 	BodyText              *[][]string          `json:"body_text,omitempty"`                // for body components (array of arrays for positional examples)
@@ -233,33 +234,33 @@ type WhatsappMessageTemplateButtonCreateRequestBodyAlias = WhatsappMessageTempla
 
 // WhatsappMessageTemplateComponentCreateOrUpdateRequestBody represents the request body for creating/updating a component.
 type WhatsappMessageTemplateComponentCreateOrUpdateRequestBody struct {
-    Type    MessageTemplateComponentType                     `json:"type,omitempty"`
-    Format  MessageTemplateComponentFormat                   `json:"format,omitempty"`
-    Text    string                                           `json:"text,omitempty"`
-    Buttons []WhatsappMessageTemplateButtonCreateRequestBody `json:"buttons,omitempty"`
-    Example *TemplateMessageComponentExample                 `json:"example,omitempty"`
+	Type    MessageTemplateComponentType                     `json:"type,omitempty"`
+	Format  MessageTemplateComponentFormat                   `json:"format,omitempty"`
+	Text    string                                           `json:"text,omitempty"`
+	Buttons []WhatsappMessageTemplateButtonCreateRequestBody `json:"buttons,omitempty"`
+	Example *TemplateMessageComponentExample                 `json:"example,omitempty"`
 }
 
 // validateCatalogAndMPMButtons ensures CATALOG and MPM buttons have required params
 // and disallow unsupported fields.
 func validateCatalogAndMPMButtons(components []WhatsappMessageTemplateComponentCreateOrUpdateRequestBody) error {
-    for _, c := range components {
-        if c.Type != MessageTemplateComponentTypeButtons {
-            continue
-        }
-        for _, b := range c.Buttons {
-            switch TemplateMessageButtonType(b.Type) {
-            case TemplateMessageButtonTypeCatalog, TemplateMessageButtonTypeMultiProductMessage:
-                if b.Text == "" {
-                    return fmt.Errorf("template button of type %s requires non-empty text", b.Type)
-                }
-                // URL and phone_number are not relevant for catalog/mpm; ignore if present
-            default:
-                // no-op
-            }
-        }
-    }
-    return nil
+	for _, c := range components {
+		if c.Type != MessageTemplateComponentTypeButtons {
+			continue
+		}
+		for _, b := range c.Buttons {
+			switch TemplateMessageButtonType(b.Type) {
+			case TemplateMessageButtonTypeCatalog, TemplateMessageButtonTypeMultiProductMessage:
+				if b.Text == "" {
+					return fmt.Errorf("template button of type %s requires non-empty text", b.Type)
+				}
+				// URL and phone_number are not relevant for catalog/mpm; ignore if present
+			default:
+				// no-op
+			}
+		}
+	}
+	return nil
 }
 
 // WhatsappMessageTemplateCreateRequestBody represents the request body for creating a message template.
@@ -287,15 +288,15 @@ type MessageTemplateCreationResponse struct {
 
 // Create sends a creation request for a message template.
 func (manager *TemplateManager) Create(body WhatsappMessageTemplateCreateRequestBody) (*MessageTemplateCreationResponse, error) {
-    // Pre-validate catalog and multi-product message buttons
-    if err := validateCatalogAndMPMButtons(body.Components); err != nil {
-        return nil, err
-    }
-    apiRequest := manager.requester.NewApiRequest(strings.Join([]string{manager.businessAccountId, "/", "message_templates"}, ""), http.MethodPost)
-    jsonBody, err := json.Marshal(body)
-    if err != nil {
-        return nil, err
-    }
+	// Pre-validate catalog and multi-product message buttons
+	if err := validateCatalogAndMPMButtons(body.Components); err != nil {
+		return nil, err
+	}
+	apiRequest := manager.requester.NewApiRequest(strings.Join([]string{manager.businessAccountId, "/", "message_templates"}, ""), http.MethodPost)
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
 	apiRequest.SetBody(string(jsonBody))
 	response, err := apiRequest.Execute()
 	if err != nil {
@@ -316,17 +317,17 @@ type WhatsAppBusinessAccountMessageTemplateUpdateRequestBody struct {
 
 // Update sends an update request for a template.
 func (manager *TemplateManager) Update(templateId string, updates WhatsAppBusinessAccountMessageTemplateUpdateRequestBody) (*MessageTemplateCreationResponse, error) {
-    // Pre-validate catalog and multi-product message buttons
-    if len(updates.Components) > 0 {
-        if err := validateCatalogAndMPMButtons(updates.Components); err != nil {
-            return nil, err
-        }
-    }
-    apiRequest := manager.requester.NewApiRequest(strings.Join([]string{templateId}, ""), http.MethodPost)
-    jsonBody, err := json.Marshal(updates)
-    if err != nil {
-        return nil, err
-    }
+	// Pre-validate catalog and multi-product message buttons
+	if len(updates.Components) > 0 {
+		if err := validateCatalogAndMPMButtons(updates.Components); err != nil {
+			return nil, err
+		}
+	}
+	apiRequest := manager.requester.NewApiRequest(strings.Join([]string{templateId}, ""), http.MethodPost)
+	jsonBody, err := json.Marshal(updates)
+	if err != nil {
+		return nil, err
+	}
 	apiRequest.SetBody(string(jsonBody))
 	response, err := apiRequest.Execute()
 	if err != nil {
