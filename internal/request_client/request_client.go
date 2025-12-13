@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	API_VERSION      = "v20.0"
+	API_VERSION      = "v24.0"
 	BASE_URL         = "graph.facebook.com"
 	REQUEST_PROTOCOL = "https"
 )
