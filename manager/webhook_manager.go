@@ -11,11 +11,11 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/gTahidi/wapi.go/internal"
 	"github.com/gTahidi/wapi.go/internal/request_client"
 	"github.com/gTahidi/wapi.go/pkg/components"
 	"github.com/gTahidi/wapi.go/pkg/events"
+	"github.com/labstack/echo/v4"
 )
 
 // WebhookManager represents a manager for handling webhooks.
@@ -115,6 +115,7 @@ func (wh *WebhookManager) PostRequestHandler(c echo.Context) error {
 					},
 					BusinessAccountId: entry.Id,
 					SenderName:        senderName,
+					UserActions:       messageValue.UserActions,
 				})
 
 				if err != nil {
@@ -341,6 +342,7 @@ type HandleMessageSubscriptionEventPayload struct {
 	PhoneNumber       events.BusinessPhoneNumber `json:"phone_number_id"`     // * this is the phone number to which this event has bee sent to
 	BusinessAccountId string                     `json:"business_account_id"` // * business account id to which this event has been sent to
 	SenderName        string                     `json:"sender_name"`
+	UserActions       []UserAction               `json:"user_actions"`
 }
 
 func (wh *WebhookManager) handleMessagesSubscriptionEvents(payload HandleMessageSubscriptionEventPayload) error {
@@ -651,6 +653,27 @@ func (wh *WebhookManager) handleMessagesSubscriptionEvents(payload HandleMessage
 			{
 				// ! TODO: handle error in the event and then emit it.
 			}
+		}
+	}
+
+	// Handle user actions (e.g., marketing messages link clicks)
+	for _, action := range payload.UserActions {
+		switch action.ActionType {
+		case UserActionTypeMarketingMessagesLinkClick:
+			wh.EventManager.Publish(events.MarketingMessagesLinkClickEventType,
+				events.NewMarketingMessagesLinkClickEvent(
+					events.BaseBusinessAccountEvent{
+						BusinessAccountId: payload.BusinessAccountId,
+						Timestamp:         action.Timestamp,
+					},
+					payload.PhoneNumber,
+					events.MarketingMessagesLinkClickData{
+						ClickComponent: events.MarketingLinkClickComponent(action.MarketingMessagesLinkClickData.ClickComponent),
+						ProductId:      action.MarketingMessagesLinkClickData.ProductId,
+						ClickId:        action.MarketingMessagesLinkClickData.ClickId,
+						TrackingToken:  action.MarketingMessagesLinkClickData.TrackingToken,
+					},
+				))
 		}
 	}
 

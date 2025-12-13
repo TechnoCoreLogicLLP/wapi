@@ -39,4 +39,5 @@ const (
 	AccountReviewUpdateEventType          EventType = "account_review_update"
 	AccountAlertsEventType                EventType = "account_alerts"
 	BusinessCapabilityUpdateEventType     EventType = "business_capability_update"
+	MarketingMessagesLinkClickEventType   EventType = "marketing_messages_link_click"
 )

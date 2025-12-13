@@ -399,12 +399,13 @@ type Change struct {
 }
 
 type MessagesValue struct {
-	MessagingProduct string    `json:"messaging_product"`
-	Metadata         Metadata  `json:"metadata"`
-	Contacts         []Contact `json:"contacts,omitempty"`
-	Statuses         []Status  `json:"statuses,omitempty"`
-	Messages         []Message `json:"messages,omitempty"`
-	Errors           []Error   `json:"errors,omitempty"`
+	MessagingProduct string       `json:"messaging_product"`
+	Metadata         Metadata     `json:"metadata"`
+	Contacts         []Contact    `json:"contacts,omitempty"`
+	Statuses         []Status     `json:"statuses,omitempty"`
+	Messages         []Message    `json:"messages,omitempty"`
+	Errors           []Error      `json:"errors,omitempty"`
+	UserActions      []UserAction `json:"user_actions,omitempty"`
 }
 
 type Metadata struct {
@@ -484,3 +485,25 @@ const (
 	MessageStatusFailed      MessageStatusEnum = "failed"
 	MessageStatusSent        MessageStatusEnum = "sent"
 )
+
+// UserActionTypeEnum represents the type of user action
+type UserActionTypeEnum string
+
+const (
+	UserActionTypeMarketingMessagesLinkClick UserActionTypeEnum = "marketing_messages_link_click"
+)
+
+// MarketingMessagesLinkClickData contains link click details from the webhook
+type MarketingMessagesLinkClickData struct {
+	ClickComponent string `json:"click_component"`
+	ProductId      string `json:"product_id,omitempty"`
+	ClickId        string `json:"click_id,omitempty"`
+	TrackingToken  string `json:"tracking_token,omitempty"`
+}
+
+// UserAction represents a user action from the webhook payload
+type UserAction struct {
+	ActionType                     UserActionTypeEnum             `json:"action_type"`
+	Timestamp                      string                         `json:"timestamp"`
+	MarketingMessagesLinkClickData MarketingMessagesLinkClickData `json:"marketing_messages_link_click_data,omitempty"`
+}
