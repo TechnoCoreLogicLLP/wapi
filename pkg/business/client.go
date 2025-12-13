@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"time"
 
@@ -491,9 +492,7 @@ func (client *BusinessClient) TemplateAnalytics(options TemplateAnalyticsOptions
 		for i, metric := range options.MetricTypes {
 			metricStrings[i] = string(metric)
 		}
-		if b, err := json.Marshal(metricStrings); err == nil {
-			analyticsField.AddFilter("metric_types", string(b))
-		}
+		analyticsField.AddFilter("metric_types", strings.Join(metricStrings, ","))
 	}
 
 	response, err := apiRequest.Execute()
