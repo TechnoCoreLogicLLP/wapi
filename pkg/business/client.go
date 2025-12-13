@@ -424,6 +424,7 @@ type TemplateAnalyticsOptions struct {
 	Granularity TemplateAnalyticsGranularityType `json:"granularity" validate:"required"`
 	TemplateIds []string                         `json:"template_ids" validate:"required"`
 	MetricTypes []TemplateAnalyticsMetricType    `json:"metric_types,omitempty"`
+	After       string                           `json:"after,omitempty"`
 }
 
 type TemplateAnalyticsCost struct {
@@ -493,6 +494,10 @@ func (client *BusinessClient) TemplateAnalytics(options TemplateAnalyticsOptions
 			metricStrings[i] = string(metric)
 		}
 		analyticsField.AddFilter("metric_types", strings.Join(metricStrings, ","))
+	}
+
+	if options.After != "" {
+		analyticsField.AddFilter("after", options.After)
 	}
 
 	response, err := apiRequest.Execute()
