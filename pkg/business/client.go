@@ -357,15 +357,19 @@ func (client *BusinessClient) ConversationAnalytics(options ConversationAnalytic
 	response, err := apiRequest.Execute()
 	if err != nil {
 		// return wapi.go custom error here
-		fmt.Println("Error while fetching business account", err)
-		return nil, err
-	}
-	var responseToReturn WhatsAppConversationAnalyticsResponse
-	if err := json.Unmarshal([]byte(response), &responseToReturn); err != nil {
+		fmt.Println("Error while fetching conversation analytics", err)
 		return nil, err
 	}
 
-	fmt.Println("Response to return is", responseToReturn)
+	fmt.Printf("DEBUG: Conversation Analytics Raw Response: %s\n", response)
+
+	var responseToReturn WhatsAppConversationAnalyticsResponse
+	if err := json.Unmarshal([]byte(response), &responseToReturn); err != nil {
+		fmt.Printf("DEBUG: Conversation Analytics Unmarshal Error: %v\n", err)
+		return nil, err
+	}
+
+	fmt.Printf("DEBUG: Conversation Analytics Parsed - Edges: %d\n", len(responseToReturn.ConversationAnalytics.Data))
 
 	return &responseToReturn, nil
 }
@@ -487,10 +491,15 @@ func (client *BusinessClient) TemplateAnalytics(options TemplateAnalyticsOptions
 		return nil, err
 	}
 
+	fmt.Printf("DEBUG: Template Analytics Raw Response: %s\n", response)
+
 	var responseToReturn TemplateAnalyticsResponse
 	if err := json.Unmarshal([]byte(response), &responseToReturn); err != nil {
+		fmt.Printf("DEBUG: Template Analytics Unmarshal Error: %v\n", err)
 		return nil, err
 	}
+
+	fmt.Printf("DEBUG: Template Analytics Parsed - Data entries: %d\n", len(responseToReturn.Data))
 
 	return &responseToReturn, nil
 }
