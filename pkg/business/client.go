@@ -504,13 +504,20 @@ func (client *BusinessClient) TemplateAnalytics(options TemplateAnalyticsOptions
 
 	fmt.Printf("DEBUG: Template Analytics Raw Response: %s\n", response)
 
-	var responseToReturn TemplateAnalyticsResponse
-	if err := json.Unmarshal([]byte(response), &responseToReturn); err != nil {
+	// The API returns data nested under "template_analytics" key, so we need a wrapper
+	var responseWrapper struct {
+		TemplateAnalytics TemplateAnalyticsResponse `json:"template_analytics"`
+	}
+	if err := json.Unmarshal([]byte(response), &responseWrapper); err != nil {
 		fmt.Printf("DEBUG: Template Analytics Unmarshal Error: %v\n", err)
 		return nil, err
 	}
 
-	fmt.Printf("DEBUG: Template Analytics Parsed - Data entries: %d\n", len(responseToReturn.Data))
+	result := &responseWrapper.TemplateAnalytics
+	fmt.Printf("DEBUG: Template Analytics Parsed - Data entries: %d\n", len(result.Data))
+	if len(result.Data) > 0 {
+		fmt.Printf("DEBUG: Template Analytics First entry has %d data points\n", len(result.Data[0].DataPoints))
+	}
 
-	return &responseToReturn, nil
+	return result, nil
 }
