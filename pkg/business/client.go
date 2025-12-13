@@ -7,7 +7,6 @@ import (
 
 	"time"
 
-	"github.com/gTahidi/wapi.go/internal"
 	"github.com/gTahidi/wapi.go/internal/request_client"
 	"github.com/gTahidi/wapi.go/manager"
 )
@@ -242,6 +241,7 @@ type ConversationAnalyticsOptions struct {
 	ConversationTypes     []ConversationType          `json:"conversation_types,omitempty"`
 	ConversationDirection []ConversationDirection     `json:"conversation_directions,omitempty"`
 	Dimensions            []ConversationDimensionType `json:"dimensions,omitempty"`
+	After                 string                      `json:"after,omitempty"`
 }
 
 type WhatsAppConversationAnalyticsNode struct {
@@ -266,9 +266,16 @@ type WhatsAppConversationAnalyticsEdge struct {
 	Dimensions []WhatsAppConversationAnalyticsDimension `json:"dimensions,omitempty"`
 }
 
+type Paging struct {
+	Cursors struct {
+		Before string `json:"before,omitempty"`
+		After  string `json:"after,omitempty"`
+	} `json:"cursors,omitempty"`
+}
+
 type WhatsAppConversationAnalyticsPayload struct {
-	Data   []WhatsAppConversationAnalyticsEdge        `json:"data,omitempty"`
-	Paging internal.WhatsAppBusinessApiPaginationMeta `json:"paging,omitempty"`
+	Data   []WhatsAppConversationAnalyticsEdge `json:"data,omitempty"`
+	Paging Paging                              `json:"paging,omitempty"`
 }
 
 type WhatsAppConversationAnalyticsResponse struct {
@@ -285,6 +292,10 @@ func (client *BusinessClient) ConversationAnalytics(options ConversationAnalytic
 	analyticsField.AddFilter("start", fmt.Sprint(options.Start.Unix()))
 	analyticsField.AddFilter("end", fmt.Sprint(options.End.Unix()))
 	analyticsField.AddFilter("granularity", string(options.Granularity))
+
+	if options.After != "" {
+		analyticsField.AddFilter("after", options.After)
+	}
 
 	if len(options.PhoneNumbers) > 0 {
 		// Pass as JSON array literal per Graph API
