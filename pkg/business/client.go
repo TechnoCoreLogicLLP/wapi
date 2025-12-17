@@ -373,15 +373,10 @@ func (client *BusinessClient) ConversationAnalytics(options ConversationAnalytic
 		return nil, err
 	}
 
-	fmt.Printf("DEBUG: Conversation Analytics Raw Response: %s\n", response)
-
 	var responseToReturn WhatsAppConversationAnalyticsResponse
 	if err := json.Unmarshal([]byte(response), &responseToReturn); err != nil {
-		fmt.Printf("DEBUG: Conversation Analytics Unmarshal Error: %v\n", err)
 		return nil, err
 	}
-
-	fmt.Printf("DEBUG: Conversation Analytics Parsed - Edges: %d\n", len(responseToReturn.ConversationAnalytics.Data))
 
 	return &responseToReturn, nil
 }
@@ -506,22 +501,15 @@ func (client *BusinessClient) TemplateAnalytics(options TemplateAnalyticsOptions
 		return nil, err
 	}
 
-	fmt.Printf("DEBUG: Template Analytics Raw Response: %s\n", response)
-
 	// The API returns data nested under "template_analytics" key, so we need a wrapper
 	var responseWrapper struct {
 		TemplateAnalytics TemplateAnalyticsResponse `json:"template_analytics"`
 	}
 	if err := json.Unmarshal([]byte(response), &responseWrapper); err != nil {
-		fmt.Printf("DEBUG: Template Analytics Unmarshal Error: %v\n", err)
 		return nil, err
 	}
 
 	result := &responseWrapper.TemplateAnalytics
-	fmt.Printf("DEBUG: Template Analytics Parsed - Data entries: %d\n", len(result.Data))
-	if len(result.Data) > 0 {
-		fmt.Printf("DEBUG: Template Analytics First entry has %d data points\n", len(result.Data[0].DataPoints))
-	}
 
 	return result, nil
 }
