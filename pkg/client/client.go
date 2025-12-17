@@ -93,3 +93,13 @@ func (client *Client) Initiate() bool {
 func (client *Client) GetMediaManager() *manager.MediaManager {
 	return manager.NewMediaManager(*client.requester)
 }
+
+// GetFlowManager returns a FlowManager for WhatsApp Flows management operations.
+// This includes creating, listing, updating, publishing, and deprecating flows.
+func (client *Client) GetFlowManager() *manager.FlowManager {
+	return manager.NewFlowManager(&manager.FlowManagerConfig{
+		BusinessAccountId: client.businessAccountId,
+		ApiAccessToken:    client.apiAccessToken,
+		Requester:         client.requester,
+	})
+}

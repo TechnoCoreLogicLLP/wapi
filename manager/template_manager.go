@@ -90,6 +90,7 @@ const (
 	TemplateMessageButtonTypeCopyCode            TemplateMessageButtonType = "COPY_CODE"
 	TemplateMessageButtonTypeCatalog             TemplateMessageButtonType = "CATALOG"
 	TemplateMessageButtonTypeMultiProductMessage TemplateMessageButtonType = "MPM"
+	TemplateMessageButtonTypeFlow                TemplateMessageButtonType = "FLOW"
 )
 
 // TemplateMessageComponentButton represents a button component in a message template.
@@ -224,8 +225,12 @@ type WhatsappMessageTemplateButtonCreateRequestBody struct {
 	Text                 string   `json:"text,omitempty"`
 	Url                  string   `json:"url,omitempty"`
 	PhoneNumber          string   `json:"phone_number,omitempty"`
-	Example              []string `json:"example,omitempty"` // For URL buttons with variables.
+	Example              []string `json:"example,omitempty"`
 	FlowId               string   `json:"flow_id,omitempty"`
+	FlowName             string   `json:"flow_name,omitempty"`
+	FlowJSON             string   `json:"flow_json,omitempty"`
+	FlowAction           string   `json:"flow_action,omitempty"`
+	NavigateScreen       string   `json:"navigate_screen,omitempty"`
 	ZeroTapTermsAccepted bool     `json:"zero_tap_terms_accepted,omitempty"`
 }
 
