@@ -1,8 +1,10 @@
 package manager
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
@@ -193,36 +195,56 @@ func (m *FlowManager) Update(flowID string, req UpdateFlowRequest) error {
 	return err
 }
 
-type UploadFlowJSONRequest struct {
-	Name      string `json:"name"`
-	AssetType string `json:"asset_type"`
-	File      string `json:"file"`
+// UploadFlowJSONResponse represents the response from uploading flow JSON
+type UploadFlowJSONResponse struct {
+	Success          bool                  `json:"success"`
+	ValidationErrors []FlowValidationError `json:"validation_errors,omitempty"`
 }
 
-func (m *FlowManager) UploadFlowJSON(flowID string, flowJSON string) (*CreateFlowResponse, error) {
-	apiRequest := m.requester.NewApiRequest(
-		strings.Join([]string{flowID, "assets"}, "/"),
+// UploadFlowJSON uploads or updates the Flow JSON for an existing flow.
+// Meta API requires multipart/form-data for the /{FLOW_ID}/assets endpoint.
+func (m *FlowManager) UploadFlowJSON(flowID string, flowJSON string) (*UploadFlowJSONResponse, error) {
+	// Build multipart form data
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	// Add 'name' field
+	if err := writer.WriteField("name", "flow.json"); err != nil {
+		return nil, fmt.Errorf("failed to write 'name' field: %w", err)
+	}
+
+	// Add 'asset_type' field
+	if err := writer.WriteField("asset_type", "FLOW_JSON"); err != nil {
+		return nil, fmt.Errorf("failed to write 'asset_type' field: %w", err)
+	}
+
+	// Add 'file' field with JSON content
+	fileWriter, err := writer.CreateFormFile("file", "flow.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create form file: %w", err)
+	}
+	if _, err := fileWriter.Write([]byte(flowJSON)); err != nil {
+		return nil, fmt.Errorf("failed to write flow JSON content: %w", err)
+	}
+
+	// Close the writer to finalize the multipart message
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close multipart writer: %w", err)
+	}
+
+	// Make the request using RequestMultipart
+	path := strings.Join([]string{flowID, "assets"}, "/")
+	response, err := m.requester.RequestMultipart(
 		http.MethodPost,
+		path,
+		&buf,
+		writer.FormDataContentType(),
 	)
-
-	body := UploadFlowJSONRequest{
-		Name:      "flow.json",
-		AssetType: "FLOW_JSON",
-		File:      flowJSON,
-	}
-
-	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("failed to upload flow JSON: %w", err)
 	}
 
-	apiRequest.SetBody(string(jsonBody))
-	response, err := apiRequest.Execute()
-	if err != nil {
-		return nil, err
-	}
-
-	var result CreateFlowResponse
+	var result UploadFlowJSONResponse
 	if err := json.Unmarshal([]byte(response), &result); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}

@@ -235,5 +235,11 @@ func (rc *RequestClient) RequestMultipart(
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
+
+	// Check for non-2xx status codes
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return "", fmt.Errorf("API request failed with status %d: %s", response.StatusCode, string(respBody))
+	}
+
 	return string(respBody), nil
 }
