@@ -128,9 +128,9 @@ type TemplateMessageParameterDateTime struct {
 
 // TemplateMessageParameterMedia represents a media parameter (for document, image, video).
 type TemplateMessageParameterMedia struct {
-	Link     string `json:"link" validate:"required"`     // URL link of the media.
-	Filename string `json:"filename" validate:"required"` // Filename of the media.
-	ID       string `json:"id" validate:"required"`       // ID of the media.
+	Link     string `json:"link" omitempty`     // URL link of the media.
+	Filename string `json:"filename" omitempty` // Filename of the media.
+	ID       string `json:"id" omitempty`       // ID of the media.
 }
 
 // TemplateMessageParameterLocation represents a location parameter.
