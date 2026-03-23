@@ -186,6 +186,8 @@ func (manager *TemplateManager) FetchAll() (*WhatsAppBusinessTemplatesFetchRespo
 		})
 	}
 
+	apiRequest.AddQueryParam("limit", "1000")
+
 	response, err := apiRequest.Execute()
 	if err != nil {
 		return nil, err
