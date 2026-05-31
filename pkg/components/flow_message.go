@@ -190,7 +190,7 @@ func (m *FlowMessage) ToJson(configs ApiCompatibleJsonConverterConfigs) ([]byte,
 	}
 
 	jsonData := FlowMessageApiPayload{
-		BaseMessagePayload: NewBaseMessagePayload(configs.SendToPhoneNumber, MessageTypeInteractive),
+		BaseMessagePayload: NewBaseMessagePayload(configs.ResolveRecipient(), MessageTypeInteractive),
 		Interactive:        *m,
 	}
 

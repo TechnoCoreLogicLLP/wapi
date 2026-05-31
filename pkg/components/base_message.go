@@ -22,6 +22,19 @@ const (
 type ApiCompatibleJsonConverterConfigs struct {
 	ReplyToMessageId  string
 	SendToPhoneNumber string
+	// SendToUserId is the business-scoped user ID (BSUID) of the recipient. When set,
+	// it takes precedence over SendToPhoneNumber as the value of the "to" field.
+	SendToUserId string
+}
+
+// ResolveRecipient returns the value to use for the "to" field of an outbound
+// message. The WhatsApp Cloud API accepts either a phone number or a BSUID in
+// this field, so SendToUserId is preferred when present.
+func (c ApiCompatibleJsonConverterConfigs) ResolveRecipient() string {
+	if c.SendToUserId != "" {
+		return c.SendToUserId
+	}
+	return c.SendToPhoneNumber
 }
 
 // Context represents the context of the message.

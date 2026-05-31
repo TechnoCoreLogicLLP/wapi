@@ -102,8 +102,10 @@ func (wh *WebhookManager) PostRequestHandler(c echo.Context) error {
 				}
 
 				senderName := ""
+				senderUserId := ""
 				if len(messageValue.Contacts) > 0 {
 					senderName = messageValue.Contacts[0].Profile.Name
+					senderUserId = messageValue.Contacts[0].UserId
 				}
 
 				err = wh.handleMessagesSubscriptionEvents(HandleMessageSubscriptionEventPayload{
@@ -115,6 +117,7 @@ func (wh *WebhookManager) PostRequestHandler(c echo.Context) error {
 					},
 					BusinessAccountId: entry.Id,
 					SenderName:        senderName,
+					SenderUserId:      senderUserId,
 					UserActions:       messageValue.UserActions,
 				})
 
@@ -342,6 +345,7 @@ type HandleMessageSubscriptionEventPayload struct {
 	PhoneNumber       events.BusinessPhoneNumber `json:"phone_number_id"`     // * this is the phone number to which this event has bee sent to
 	BusinessAccountId string                     `json:"business_account_id"` // * business account id to which this event has been sent to
 	SenderName        string                     `json:"sender_name"`
+	SenderUserId      string                     `json:"sender_user_id"` // * business-scoped user ID (BSUID) of the sender
 	UserActions       []UserAction               `json:"user_actions"`
 }
 
@@ -354,20 +358,20 @@ func (wh *WebhookManager) handleMessagesSubscriptionEvents(payload HandleMessage
 				{
 					wh.EventManager.Publish(events.MessageDeliveredEventType, events.NewMessageDeliveredEvent(events.BaseSystemEvent{
 						Timestamp: status.Timestamp,
-					}, status.Id, status.RecipientId))
+					}, status.Id, status.RecipientId, status.RecipientUserId))
 				}
 
 			case string(MessageStatusRead):
 				{
 					wh.EventManager.Publish(events.MessageReadEventType, events.NewMessageReadEvent(events.BaseSystemEvent{
 						Timestamp: status.Timestamp,
-					}, status.Id, status.RecipientId))
+					}, status.Id, status.RecipientId, status.RecipientUserId))
 				}
 			case string(MessageStatusSent):
 				{
 					wh.EventManager.Publish(events.MessageSentEventType, events.NewMessageSentEvent(events.BaseSystemEvent{
 						Timestamp: status.Timestamp,
-					}, status.Id, status.RecipientId))
+					}, status.Id, status.RecipientId, status.RecipientUserId))
 				}
 			case string(MessageStatusFailed):
 				{
@@ -385,7 +389,7 @@ func (wh *WebhookManager) handleMessagesSubscriptionEvents(payload HandleMessage
 
 					wh.EventManager.Publish(events.MessageFailedEventType, events.NewMessageFailedEvent(events.BaseSystemEvent{
 						Timestamp: status.Timestamp,
-					}, status.Id, status.RecipientId, failedReason, errorCode, errorMessage))
+					}, status.Id, status.RecipientId, status.RecipientUserId, failedReason, errorCode, errorMessage))
 				}
 			case string(MessageStatusUnDelivered):
 				{
@@ -403,7 +407,7 @@ func (wh *WebhookManager) handleMessagesSubscriptionEvents(payload HandleMessage
 
 					wh.EventManager.Publish(events.MessageUndeliveredEventType, events.NewMessageUndeliveredEvent(events.BaseSystemEvent{
 						Timestamp: status.Timestamp,
-					}, status.Id, status.RecipientId, undeliveredReason, errorCode, errorMessage))
+					}, status.Id, status.RecipientId, status.RecipientUserId, undeliveredReason, errorCode, errorMessage))
 				}
 			}
 
@@ -422,6 +426,7 @@ func (wh *WebhookManager) handleMessagesSubscriptionEvents(payload HandleMessage
 			PhoneNumber:       payload.PhoneNumber,
 			Timestamp:         message.Timestamp,
 			From:              message.From,
+			SenderUserId:      payload.SenderUserId,
 			SenderName:        payload.SenderName,
 			IsForwarded:       message.Context.Forwarded,
 			Context: events.MessageContext{

@@ -124,6 +124,74 @@ func (mm *MessageManager) Send(message components.BaseMessage, phoneNumber strin
 	return &sendResponse, nil
 }
 
+// authenticationAwareMessage is implemented by messages that can report whether
+// they are authentication-category templates (e.g. OTP / verification codes).
+type authenticationAwareMessage interface {
+	IsAuthentication() bool
+}
+
+// SendToUser sends a message to a business-scoped user ID (BSUID) instead of a
+// phone number. The BSUID is surfaced in inbound message and status webhooks
+// (Contact.UserId / Status.RecipientUserId).
+//
+// Authentication-category templates (OTP / verification codes) cannot be
+// delivered to a BSUID and are rejected before the request is made.
+func (mm *MessageManager) SendToUser(message components.BaseMessage, userId string) (*MessageSendResponse, error) {
+	if a, ok := message.(authenticationAwareMessage); ok && a.IsAuthentication() {
+		return nil, fmt.Errorf("authentication templates cannot be sent to a business-scoped user ID (BSUID)")
+	}
+
+	body, err := message.ToJson(components.ApiCompatibleJsonConverterConfigs{
+		SendToUserId: userId,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error converting message to json: %v", err)
+	}
+
+	return mm.dispatch(body)
+}
+
+// ReplyToUser sends a reply to a business-scoped user ID (BSUID), quoting the
+// message identified by replyTo. See SendToUser for the BSUID restrictions.
+func (mm *MessageManager) ReplyToUser(message components.BaseMessage, userId string, replyTo string) (*MessageSendResponse, error) {
+	if a, ok := message.(authenticationAwareMessage); ok && a.IsAuthentication() {
+		return nil, fmt.Errorf("authentication templates cannot be sent to a business-scoped user ID (BSUID)")
+	}
+
+	body, err := message.ToJson(components.ApiCompatibleJsonConverterConfigs{
+		SendToUserId:     userId,
+		ReplyToMessageId: replyTo,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error converting message to json: %v", err)
+	}
+
+	return mm.dispatch(body)
+}
+
+// dispatch posts an already-serialized message body to the messages endpoint and
+// parses the structured response.
+func (mm *MessageManager) dispatch(body []byte) (*MessageSendResponse, error) {
+	apiRequest := mm.requester.NewApiRequest(strings.Join([]string{mm.PhoneNumberId, "messages"}, "/"), http.MethodPost)
+	apiRequest.SetBody(string(body))
+	responseStr, err := apiRequest.Execute()
+	if err != nil {
+		return nil, err
+	}
+
+	var sendResponse MessageSendResponse
+	err = json.Unmarshal([]byte(responseStr), &sendResponse)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling response: %v", err)
+	}
+
+	if sendResponse.Error != nil {
+		return &sendResponse, fmt.Errorf("error sending message: %s", sendResponse.Error.Message)
+	}
+
+	return &sendResponse, nil
+}
+
 // ReadMessage marks a message as read.
 // messageId: The ID of the message to mark as read
 // showTyping: Whether to show typing indicator (will auto-dismiss after 25 seconds or when you respond)

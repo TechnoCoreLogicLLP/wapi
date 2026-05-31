@@ -219,6 +219,7 @@ const (
 
 type Contact struct {
 	WaId    string  `json:"wa_id"`
+	UserId  string  `json:"user_id,omitempty"` // Business-scoped user ID (BSUID) of the contact, present even when wa_id is a phone number.
 	Profile Profile `json:"profile"`
 }
 
@@ -414,13 +415,14 @@ type Metadata struct {
 }
 
 type Status struct {
-	Id           string       `json:"id"`
-	Conversation Conversation `json:"conversation,omitempty"`
-	Errors       []Error      `json:"errors,omitempty"`
-	Status       string       `json:"status"`
-	Timestamp    string       `json:"timestamp"`
-	RecipientId  string       `json:"recipient_id"`
-	Pricing      Pricing      `json:"pricing,omitempty"`
+	Id              string       `json:"id"`
+	Conversation    Conversation `json:"conversation,omitempty"`
+	Errors          []Error      `json:"errors,omitempty"`
+	Status          string       `json:"status"`
+	Timestamp       string       `json:"timestamp"`
+	RecipientId     string       `json:"recipient_id"`
+	RecipientUserId string       `json:"recipient_user_id,omitempty"` // Business-scoped user ID (BSUID) of the recipient.
+	Pricing         Pricing      `json:"pricing,omitempty"`
 }
 
 type Conversation struct {

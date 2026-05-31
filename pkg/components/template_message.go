@@ -3,6 +3,7 @@ package components
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/gTahidi/wapi.go/internal"
 )
@@ -218,6 +219,17 @@ type TemplateMessage struct {
 	Name       string                     `json:"name" validate:"required"`       // Template name.
 	Language   TemplateMessageLanguage    `json:"language" validate:"required"`   // Language configuration.
 	Components []TemplateMessageComponent `json:"components" validate:"required"` // Array of components.
+	// Category is the template category (e.g. "authentication", "marketing", "utility").
+	// It is not serialized into the send payload; it is used client-side to guard sends,
+	// for example to prevent authentication templates from being sent to a BSUID.
+	Category string `json:"-"`
+}
+
+// IsAuthentication reports whether this template is an authentication-category
+// template (OTP / verification codes). Such templates cannot be delivered to a
+// business-scoped user ID (BSUID).
+func (tm *TemplateMessage) IsAuthentication() bool {
+	return strings.EqualFold(tm.Category, "authentication")
 }
 
 // TemplateMessageApiPayload represents the API payload for sending a template message.
@@ -230,6 +242,7 @@ type TemplateMessageApiPayload struct {
 type TemplateMessageConfigs struct {
 	Name     string `json:"name" validate:"required"`     // Template name.
 	Language string `json:"language" validate:"required"` // Language code.
+	Category string `json:"category,omitempty"`           // Optional template category, e.g. "authentication".
 }
 
 // NewTemplateMessage creates a new TemplateMessage instance.
@@ -240,6 +253,7 @@ func NewTemplateMessage(params *TemplateMessageConfigs) (*TemplateMessage, error
 			Code:   params.Language,
 			Policy: "deterministic",
 		},
+		Category: params.Category,
 	}, nil
 }
 
@@ -314,7 +328,7 @@ func (m *TemplateMessage) ToJson(configs ApiCompatibleJsonConverterConfigs) ([]b
 	}
 
 	jsonData := TemplateMessageApiPayload{
-		BaseMessagePayload: NewBaseMessagePayload(configs.SendToPhoneNumber, MessageTypeTemplate),
+		BaseMessagePayload: NewBaseMessagePayload(configs.ResolveRecipient(), MessageTypeTemplate),
 		Template:           *m,
 	}
 

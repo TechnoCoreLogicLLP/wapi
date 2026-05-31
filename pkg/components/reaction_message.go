@@ -41,7 +41,7 @@ func (reaction *ReactionMessage) ToJson(configs ApiCompatibleJsonConverterConfig
 	}
 
 	jsonData := ReactionMessageApiPayload{
-		BaseMessagePayload: NewBaseMessagePayload(configs.SendToPhoneNumber, MessageTypeReaction),
+		BaseMessagePayload: NewBaseMessagePayload(configs.ResolveRecipient(), MessageTypeReaction),
 		Reaction:           *reaction,
 	}
 
